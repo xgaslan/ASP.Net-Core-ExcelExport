@@ -13,7 +13,7 @@ namespace ExcelExport
         static async Task Main(string[] args)
         {
             ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
-            
+
             var directory = @"C:\Demos\";
             var fileName = "ExcelDemo.xlsx";
 
@@ -27,6 +27,40 @@ namespace ExcelExport
             var people = GetSetupData();
 
             await SaveExcelFile(people, file);
+
+            List<PersonModel> peopleFromExcel = await LoadExcelFile(file);
+
+            foreach (var p in peopleFromExcel)
+            {
+                Console.WriteLine($"{p.Id} {p.Firstname} {p.LastName}");
+            }
+        }
+
+        private static async Task<List<PersonModel>> LoadExcelFile(FileInfo file)
+        {
+            List<PersonModel> output = new List<PersonModel>();
+
+            using var package = new ExcelPackage(file);
+
+            await package.LoadAsync(file);
+
+            var ws = package.Workbook.Worksheets[0];
+
+            int row = 3;
+            int col = 1;
+
+            while (string.IsNullOrWhiteSpace(ws.Cells[row, col].Value?.ToString()) == false)
+            {
+                PersonModel p = new PersonModel();
+                p.Id = int.Parse(ws.Cells[row, col].Value.ToString());
+                p.Firstname = ws.Cells[row, col + 1].Value.ToString();
+                p.LastName = ws.Cells[row, col + 2].Value.ToString();
+
+                output.Add(p);
+                row += 1;
+            }
+
+            return output;
         }
 
         private static async Task SaveExcelFile(List<PersonModel> people, FileInfo file)
@@ -49,6 +83,8 @@ namespace ExcelExport
 
             ws.Row(2).Style.HorizontalAlignment = ExcelHorizontalAlignment.Center;
             ws.Row(2).Style.Font.Bold = true;
+
+            ws.Column(3).Width = 20;
 
             await package.SaveAsync();
 
